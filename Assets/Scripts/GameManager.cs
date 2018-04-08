@@ -11,6 +11,7 @@ public class GameManager : MonoBehaviour {
 	public Rigidbody discRigidBody;
 	public Button fireButton;
 	public Slider targetSlider;
+	public GameObject direction;
 
 
 	private float curvedAmount = 0f;
@@ -19,7 +20,8 @@ public class GameManager : MonoBehaviour {
 	private float power = 50f;
 	private bool continueToRotate = false;
 	private LineRenderer targetLineRenderer ;
-
+	private Animator anim;
+	private float massAfterGround = 10f;
 
 	// Use this for initialization
 	void Start () {
@@ -27,9 +29,12 @@ public class GameManager : MonoBehaviour {
 		curveSlider.minValue = -50;
 		curveSlider.maxValue = 50;
 
+		//animator init
+		anim = gameObject.GetComponent<Animator>();
+
 
 		//set target line renderer
-		targetLineRenderer = discRigidBody.GetComponent<LineRenderer>();
+		targetLineRenderer = direction.GetComponent<LineRenderer>();
 		decorateTargetLineRenderer ();
 		renderTargetLine ();
 
@@ -43,10 +48,16 @@ public class GameManager : MonoBehaviour {
 
 
 	private void Fire(){
+		//start the animation
+		anim.SetBool("unstability", true);
+
 		curvedAmount = curveSlider.value;
 		if (!isFired) {
+			//discRigidBody.isKinematic = false;
+			//discRigidBody.AddForce(center.transform.forward * power,ForceMode.Impulse);	
+			//discRigidBody.AddForce(transform.forward * power,ForceMode.Impulse);
 			discRigidBody.isKinematic = false;
-			discRigidBody.AddForce(transform.forward * power,ForceMode.Impulse);	
+			discRigidBody.AddForce(direction.transform.forward * power,ForceMode.Impulse);
 			isFired = true;
 			targetLineRenderer.enabled = false;
 		}
@@ -61,9 +72,24 @@ public class GameManager : MonoBehaviour {
 			Rotate ();
 
 
-		if (!didTouchTheGround) {  // Curve force added each frame
-			Vector3 sideDir = Vector3.Cross(transform.up, discRigidBody.velocity).normalized;
-			discRigidBody.AddForce(sideDir * curvedAmount);
+		if (!didTouchTheGround) {  
+			// Curve force added each frame
+			//Vector3 sideDir = Vector3.Cross (transform.up, discRigidBody.velocity).normalized;
+			//discRigidBody.AddForce (sideDir * curvedAmount);
+
+			if (isFired) {
+
+				// Curve force added each frame
+				Vector3 sideDir = Vector3.Cross (direction.transform.up, discRigidBody.velocity).normalized;
+				discRigidBody.AddForce (sideDir * curvedAmount);
+
+			}
+		} else {
+			//stop the animation
+			Debug.Log("Touched the ground");
+			anim.SetBool("unstability", false);
+			discRigidBody.mass = massAfterGround;
+			discRigidBody.AddForce(Vector3.down * 9.8f * discRigidBody.mass);
 		}
 	}
 
@@ -96,15 +122,14 @@ public class GameManager : MonoBehaviour {
 	}
 
 	void Rotate() {
-		discRigidBody.transform.Rotate (Vector3.up, targetSlider.value * Time.deltaTime);
+		direction.transform.Rotate (Vector3.up, targetSlider.value * Time.deltaTime);
 		renderTargetLine ();
 	}
-
-
+		
 	private void renderTargetLine(){
 		targetLineRenderer.positionCount = 2;
-		targetLineRenderer.SetPosition(0, transform.position);
-		targetLineRenderer.SetPosition(1, transform.forward * 20 + transform.position);
+		targetLineRenderer.SetPosition(0, direction.transform.position);
+		targetLineRenderer.SetPosition(1, direction.transform.forward * 20 + direction.transform.position);
 
 		decorateTargetLineRenderer ();
 	}
