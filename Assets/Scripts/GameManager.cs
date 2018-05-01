@@ -13,6 +13,10 @@ public class GameManager : MonoBehaviour {
 	public Slider targetSlider;
 	public GameObject direction;
 
+	public GameObject nextLevelPanel;
+	public GameObject retryPanel;
+	private bool panelSet = false;
+
 
 	private float curvedAmount = 0f;
 	private bool didTouchTheGround = false;
@@ -23,15 +27,26 @@ public class GameManager : MonoBehaviour {
 	private Animator anim;
 	private float massAfterGround = 10f;
 
+	private Color startCol = new Color (237f, 89f, 78f);
+
+
 	// Use this for initialization
 	void Start () {
+
+		SetUpDiscPosition ();
+
 		//initial setup
 		curveSlider.minValue = -50;
 		curveSlider.maxValue = 50;
 
 		//animator init
 		anim = gameObject.GetComponent<Animator>();
+		anim.SetBool("unstability", true);
 
+
+		//hide the panels if not hidden
+		nextLevelPanel.SetActive(false);
+		retryPanel.SetActive(false);
 
 		//set target line renderer
 		targetLineRenderer = direction.GetComponent<LineRenderer>();
@@ -44,6 +59,32 @@ public class GameManager : MonoBehaviour {
 		//setting fire listener
 		Button btn = fireButton.GetComponent<Button>();
 		btn.onClick.AddListener(Fire);
+	}
+
+
+	private void SetUpDiscPosition(){
+	
+		float pos_x = PlayerPrefs.GetFloat ("Disc_pX");
+		float pos_y = PlayerPrefs.GetFloat ("Disc_pY");
+		float pos_z = PlayerPrefs.GetFloat ("Disc_pZ");
+
+
+		float rot_x = PlayerPrefs.GetFloat ("Disc_rX");
+		float rot_y = PlayerPrefs.GetFloat ("Disc_rY");
+		float rot_z = PlayerPrefs.GetFloat ("Disc_rZ");
+
+		transform.position = new Vector3 (pos_x, pos_y, pos_z);
+		Quaternion target = Quaternion.Euler(rot_x, rot_y, rot_z);
+		transform.rotation = target;
+
+		//set direction
+		float dir_rot_x = PlayerPrefs.GetFloat ("Dir_rX");
+		float dir_rot_y = PlayerPrefs.GetFloat ("Dir_rY");
+		float dir_rot_z = PlayerPrefs.GetFloat ("Dir_rZ");
+
+		Quaternion dir_target = Quaternion.Euler(dir_rot_x, dir_rot_y, dir_rot_z);
+		direction.transform.position = new Vector3 (pos_x, pos_y, pos_z);
+		direction.transform.rotation = dir_target;
 	}
 
 
@@ -74,11 +115,8 @@ public class GameManager : MonoBehaviour {
 
 		if (!didTouchTheGround) {  
 			// Curve force added each frame
-			//Vector3 sideDir = Vector3.Cross (transform.up, discRigidBody.velocity).normalized;
-			//discRigidBody.AddForce (sideDir * curvedAmount);
 
 			if (isFired) {
-
 				// Curve force added each frame
 				Vector3 sideDir = Vector3.Cross (direction.transform.up, discRigidBody.velocity).normalized;
 				discRigidBody.AddForce (sideDir * curvedAmount);
@@ -101,12 +139,23 @@ public class GameManager : MonoBehaviour {
 
 	void OnCollisionEnter(Collision collision) {
 		didTouchTheGround = true;
+
+		if (collision.collider.tag == "Target" && !panelSet) {
+			nextLevelPanel.SetActive (true);
+			SetLevel ();
+			panelSet = true;
+		} else if (!panelSet) {
+			retryPanel.SetActive (true);
+			panelSet = true;
+		}
+
 		Debug.Log ("Touched ground : OnCollisionEnter");
 	}
 
 
 	void OnTriggerEnter(Collider other) {
 		didTouchTheGround = true;
+		anim.updateMode = AnimatorUpdateMode.AnimatePhysics;
 		Debug.Log ("Touched ground : OnTriggerEnter");
 	}
 
@@ -115,7 +164,7 @@ public class GameManager : MonoBehaviour {
 		float alpha = 1.0f;
 		Gradient gradient = new Gradient();
 		gradient.SetKeys(
-			new GradientColorKey[] { new GradientColorKey(Color.green, 0.0f), new GradientColorKey(Color.red, 1.0f) },
+			new GradientColorKey[] { new GradientColorKey(startCol, 0.0f), new GradientColorKey(Color.gray, 1.0f) },
 			new GradientAlphaKey[] { new GradientAlphaKey(alpha, 0.0f), new GradientAlphaKey(alpha, 1.0f) }
 		);
 		targetLineRenderer.colorGradient = gradient;
@@ -127,9 +176,11 @@ public class GameManager : MonoBehaviour {
 	}
 		
 	private void renderTargetLine(){
+		targetLineRenderer.startWidth = 0.5f;
+		targetLineRenderer.endWidth = 0f;
 		targetLineRenderer.positionCount = 2;
 		targetLineRenderer.SetPosition(0, direction.transform.position);
-		targetLineRenderer.SetPosition(1, direction.transform.forward * 20 + direction.transform.position);
+		targetLineRenderer.SetPosition(1, direction.transform.forward * 5 + direction.transform.position);
 
 		decorateTargetLineRenderer ();
 	}
@@ -148,5 +199,11 @@ public class GameManager : MonoBehaviour {
 	{
 		continueToRotate = true;
 		Debug.Log("OnStartDrag called.");
+	}
+
+
+	private void SetLevel(){
+		int atLevel = PlayerPrefs.GetInt ("LevelCompleted");
+		PlayerPrefs.SetInt ("LevelCompleted", atLevel + 1);
 	}
 }

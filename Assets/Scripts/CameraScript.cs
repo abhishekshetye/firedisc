@@ -12,6 +12,19 @@ public class CameraScript : MonoBehaviour {
 	// Use this for initialization
 	void Start () 
 	{
+		float pos_x = PlayerPrefs.GetFloat ("Camera_pX");
+		float pos_y = PlayerPrefs.GetFloat ("Camera_pY");
+		float pos_z = PlayerPrefs.GetFloat ("Camera_pZ");
+
+
+		float rot_x = PlayerPrefs.GetFloat ("Camera_rX");
+		float rot_y = PlayerPrefs.GetFloat ("Camera_rY");
+		float rot_z = PlayerPrefs.GetFloat ("Camera_rZ");
+
+		transform.position = new Vector3 (pos_x, pos_y, pos_z);
+		Quaternion target = Quaternion.Euler(rot_x, rot_y, rot_z);
+		transform.rotation = target;
+		
 		//Calculate and store the offset value by getting the distance between the player's position and camera's position.
 		offset = transform.position - disc.transform.position;
 	}
